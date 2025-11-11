@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GPT Voice Chatbot</title>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      font-family: Arial, sans-serif;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    h2 {
+      color: #00ffff;
+    }
+    #chat-box {
+      width: 80%;
+      height: 400px;
+      background: #2b2b2b;
+      border-radius: 10px;
+      overflow-y: auto;
+      padding: 15px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 75%;
+      line-height: 1.4;
+    }
+    .user {
+      background: #00ffff;
+      color: black;
+      align-self: flex-end;
+      text-align: right;
+      margin-left: auto;
+    }
+    .bot {
+      background: #444;
+      color: white;
+      align-self: flex-start;
+      text-align: left;
+      margin-right: auto;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #00ffff;
+      color: black;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      font-size: 1rem;
+    }
+    input[type="text"]:focus {
+      outline: 2px solid #00ffff;
+    }
+  </style>
+</head>
+<body>
+  <h2>AI Voice Chatbot</h2>
+  <div id="chat-box"></div>
+
+  <!-- Text input form -->
+  <div style="width: 80%; margin-bottom: 20px; display: flex; gap: 10px;">
+    <input type="text" id="message-input" placeholder="Type your message here..." style="flex: 1; padding: 10px; border-radius: 5px; border: none;" />
+    <button onclick="sendMessage()" style="padding: 10px 20px; background: #00ffff; color: black; border: none; border-radius: 5px; cursor: pointer;">Send</button>
+  </div>
+
+  <div class="button-group">
+    <button onclick="startListening()">🎤 Start Talking</button>
+    <button onclick="stopSpeaking()">🔇 Stop Speaking</button>
+    <button onclick="window.location.href='/'">🏠 Go Back</button>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    let currentUtterance = null;
+
+    function appendMessage(message, type) {
+      const div = document.createElement('div');
+      div.classList.add('message', type);
+      div.textContent = message;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function speak(text) {
+      stopSpeaking();
+      currentUtterance = new SpeechSynthesisUtterance(text);
+      currentUtterance.lang = 'en-US';
+      speechSynthesis.speak(currentUtterance);
+    }
+
+    function stopSpeaking() {
+      if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+      }
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('message-input');
+      const message = input.value.trim();
+
+      if (!message) return;
+
+      appendMessage(message, 'user');
+      input.value = '';
+
+      // Show typing indicator
+      appendMessage("🤖 AI is thinking...", 'bot');
+
+      fetch('/get_response', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message: message })
+      })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        // Remove typing indicator
+        const messages = chatBox.querySelectorAll('.bot');
+        if (messages.length > 0) {
+          messages[messages.length - 1].remove();
+        }
+
+        if (data.reply) {
+          appendMessage(data.reply, 'bot');
+          speak(data.reply);
+        } else {
+          appendMessage("Sorry, I didn't get a response. Please try again.", 'bot');
+        }
+      })
+      .catch(err => {
+        // Remove typing indicator
+        const messages = chatBox.querySelectorAll('.bot');
+        if (messages.length > 0) {
+          messages[messages.length - 1].remove();
+        }
+
+        const errorMsg = "Error: " + err.message;
+        appendMessage(errorMsg, 'bot');
+        console.error("Chat error:", err);
+      });
+    }
+
+    // Welcome message when page loads
+    window.addEventListener('load', function() {
+      appendMessage("👋 Hello! I'm your AI assistant. You can talk to me by clicking 'Start Talking' or type your message below.", 'bot');
+    });
+
+    // Allow Enter key to send messages
+    document.getElementById('message-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    function startListening() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        appendMessage("Speech recognition not supported. Please use Chrome or Edge.", 'bot');
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      // Add timeout for no-speech detection
+      let timeout = setTimeout(() => {
+        recognition.abort();
+        appendMessage('⏰ No speech detected within 5 seconds. Please try again.', 'bot');
+      }, 5000);
+
+      appendMessage("🎤 Listening... Speak now!", 'bot');
+
+      recognition.onresult = function (event) {
+        clearTimeout(timeout); // Clear timeout on successful recognition
+        const transcript = event.results[0][0].transcript;
+        appendMessage(transcript, 'user');
+
+        // Show typing indicator
+        appendMessage("🤖 AI is thinking...", 'bot');
+
+        fetch('/get_response', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ message: transcript })
+        })
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          // Remove typing indicator (the last bot message)
+          const messages = chatBox.querySelectorAll('.bot');
+          if (messages.length > 0) {
+            messages[messages.length - 1].remove();
+          }
+
+          if (data.reply) {
+            appendMessage(data.reply, 'bot');
+            speak(data.reply);
+          } else {
+            appendMessage("Sorry, I didn't get a response. Please try again.", 'bot');
+          }
+        })
+        .catch(err => {
+          // Remove typing indicator
+          const messages = chatBox.querySelectorAll('.bot');
+          if (messages.length > 0) {
+            messages[messages.length - 1].remove();
+          }
+
+          const errorMsg = "Error: " + err.message;
+          appendMessage(errorMsg, 'bot');
+          console.error("Chat error:", err);
+        });
+      };
+
+      recognition.onerror = function (event) {
+        let errorMessage = `❌ Speech recognition error: ${event.error}`;
+        
+        if (event.error === 'no-speech') {
+          errorMessage = '🎤 No speech detected. Please speak clearly and try again.';
+        } else if (event.error === 'audio-capture') {
+          errorMessage = '🎤 Microphone access denied. Please allow microphone permissions.';
+        } else if (event.error === 'not-allowed') {
+          errorMessage = '🎤 Microphone not allowed. Please check your browser settings.';
+        } else if (event.error === 'network') {
+          errorMessage = '🌐 Network error. Please check your internet connection.';
+        }
+        
+        appendMessage(errorMessage, 'bot');
+        console.error("Speech recognition error:", event.error);
+      };
+
+      recognition.onend = function() {
+        appendMessage("🎤 Listening stopped. Click 'Start Talking' to try again.", 'bot');
+      };
+
+      recognition.start();
+    }
+  </script>
+</body>
+</html>
