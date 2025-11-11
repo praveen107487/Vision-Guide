@@ -1,0 +1,5 @@
+Flask==2.3.3
+gTTS==2.3.2
+Pillow==10.0.1
+google-generativeai==0.3.2
+requests==2.31.0
