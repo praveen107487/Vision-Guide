@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Scenery Result</title>
+  <style>
+    body {
+      background-color: #000;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #00ffff;
+      margin-bottom: 20px;
+    }
+    .image-container {
+      max-width: 90%;
+      margin: 0 auto 20px;
+    }
+    .image-container img {
+      width: 100%;
+      max-width: 600px;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+    .description {
+      margin: 20px auto;
+      max-width: 700px;
+      font-size: 1.2rem;
+      line-height: 1.6;
+      color: #e0e0e0;
+    }
+    audio {
+      margin-top: 20px;
+      width: 90%;
+      max-width: 500px;
+    }
+    .back {
+      margin-top: 30px;
+      color: #ccc;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>Scenery Explanation</h1>
+
+  {% if image %}
+  <div class="image-container">
+    <img src="{{ url_for('static', filename=image) }}" alt="Scenery Image" />
+  </div>
+  {% endif %}
+
+  {% if description %}
+  <div class="description">
+    <strong>Description:</strong> {{ description }}
+  </div>
+  {% endif %}
+
+  {% if audio %}
+  <audio controls autoplay>
+    <source src="{{ url_for('static', filename=audio) }}" type="audio/mpeg" />
+  </audio>
+  {% endif %}
+
+  <div class="back" onclick="window.location.href='/'">← Back to Home</div>
+</body>
+</html>
