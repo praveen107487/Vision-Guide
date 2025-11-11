@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Scan Photo</title>
+  <style>
+    body {
+      background-color: #000;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #00ffff;
+      margin-bottom: 10px;
+    }
+    #video {
+      margin-top: 20px;
+      width: 90%;
+      max-width: 600px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    }
+    #snap {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #00ffff;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    #snap:disabled {
+        background-color: #555;
+        cursor: not-allowed;
+    }
+    canvas {
+      display: none;
+    }
+    .back {
+      margin-top: 30px;
+      color: #ccc;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    #error-message {
+      color: red;
+      margin-top: 20px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Scan Your Photo</h1>
+  <video id="video" autoplay playsinline></video>
+  <br />
+  <button id="snap">Take Photo</button>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <p class="back" onclick="history.back()">← Go Back</p>
+  <div id="error-message"></div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    const snapButton = document.getElementById('snap');
+    const errorMsg = document.getElementById('error-message');
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        let message = "Error accessing the camera. ";
+        if (err.name === 'NotAllowedError') {
+          message += "Please allow camera permissions in your browser.";
+        } else if (err.name === 'NotFoundError') {
+          message += "No camera was found on this device.";
+        } else {
+            message += err.message;
+        }
+        errorMsg.textContent = message;
+        snapButton.disabled = true;
+        console.error("Camera error:", err);
+      }
+    }
+
+    snapButton.addEventListener('click', async () => {
+      if (!video.srcObject) {
+        errorMsg.textContent = "Camera is not available.";
+        return;
+      }
+
+      snapButton.textContent = 'Processing...';
+      snapButton.disabled = true;
+      errorMsg.textContent = '';
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataURL = canvas.toDataURL('image/jpeg');
+
+      try {
+        const response = await fetch('/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataURL })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.redirect) {
+          window.location.href = result.redirect;
+        } else {
+          errorMsg.textContent = "Error: " + (result.error || "Failed to process image.");
+          snapButton.textContent = 'Take Photo';
+          snapButton.disabled = false;
+        }
+      } catch (error) {
+        errorMsg.textContent = "A network error occurred. Please try again.";
+        snapButton.textContent = 'Take Photo';
+        snapButton.disabled = false;
+        console.error("Capture/upload error:", error);
+      }
+    });
+
+    window.addEventListener('load', startCamera);
+  </script>
+</body>
+</html>
