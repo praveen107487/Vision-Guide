@@ -57,11 +57,7 @@ def generate_caption(image_path, model, tokenizer, max_length):
     return caption
 
 # Main function
-def use_model(image_path):
-    model, tokenizer = load_model(model_path, tokenizer_path)
-    caption = generate_caption(image_path, model, tokenizer, max_length)
-    print(f"Caption: {caption}")
-    return caption
+
 
 # Example
 # use_model('path/to/image.jpg')
