@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vision Guide AI</title>
+  <style>
+    body {
+      background-color: #0d0d0d;
+      color: #ffffff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #00ffff;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px;
+      background-color: #00ffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      color: #000;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #00cccc;
+    }
+    p {
+      margin-top: 40px;
+      font-size: 1rem;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to Vision Guide AI</h1>
+
+  <button onclick="window.location.href='/gpt'">Go to GPT</button>
+  <button onclick="window.location.href='/scan'">Scan Photo</button>
+  <button onclick="window.location.href='/upload_image'">Upload Photo</button>
+
+  <p>Say "go to gpt", "scan photo", or "upload photo"</p>
+
+  <script>
+    if ('webkitSpeechRecognition' in window) {
+      const recognition = new webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = function(event) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript.toLowerCase().trim();
+          if (transcript.includes('go to gpt')) {
+            window.location.href = '/gpt';
+          } else if (transcript.includes('scan photo')) {
+            window.location.href = '/scan';
+          } else if (transcript.includes('upload photo')) {
+            window.location.href = '/upload_image';
+          }
+        }
+      };
+      recognition.start();
+    } else {
+        console.log("Speech recognition not supported in this browser.");
+    }
+  </script>
+</body>
+</html>
